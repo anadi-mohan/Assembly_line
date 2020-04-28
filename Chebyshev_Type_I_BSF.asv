@@ -1,0 +1,57 @@
+clc;clear all;close all;
+%-----------given specification-----------
+f1=0.0349;
+f2=0.0659;
+fu=0.1591;
+fl=0.01725
+pr=1;
+sa=15;
+%-----------sampling rate-----------
+fs=2000;
+T=1/fs;
+%-----------frequency in rad/sample-----------
+w1=2*pi*f1/fs;
+w2=2*pi*f2/fs;
+wu=2*pi*fu/fs;
+wl=2*pi*fl/fs;
+%-----------frequency in rad/sec-----------
+o1=(2/T)*(tan(w1/2))
+o2=(2/T)*(tan(w2/2))
+ou=(2/T)*(tan(wu/2))
+ol=(2/T)*(tan(wl/2))
+%-----------omegaR calculation-----------
+x=(o1*(ou-ol))/(-o1^2+ou*ol);
+y=(o2*(ou-ol))/(-o2^2+ou*ol);
+Or=min(abs(x),abs(y))
+%-----------order calculation-----------
+ep=sqrt(10^(pr/10)-1);
+A=10^(sa/20);
+g=sqrt(((A^2)-1)/ep^2);
+
+N=ceil(log(g+sqrt(g^2+1))/log(Or+sqrt(Or^2+1)))
+%-----------poles generation-----------
+s=tf('s');
+hsde=1;
+for k=1:N
+	sigmak=-sinh((1/N)*asinh(1/ep))*sin((2*k-1)*pi/(2*N));
+	omegak=cosh((1/N)*asinh(1/ep))*cos((2*k-1)*pi/(2*N));
+	sk(k)=sigmak+j*omegak;
+	hsde=hsde*(s-sk(k));
+end
+disp('Roots');
+disp(sk);
+%normalis
+b0=real(hsde.Numerator{1}(1,N+1));
+if(mod(N,2)==0)
+    k0=b0/sqrt(ep^2+1);
+else
+    k0=b0;
+end
+Hnormalised=tf([0 k0],real(hsde.Numerator{1}(1,:)));
+disp("The normalised lowpass function");
+display(Hnormalised);
+
+ocf=sqrt(ou*ol);
+obw=ou-ol;
+[b a]=lp2bs([k0],real(hsde.Numerator{1}(1,:)),ocf,obw);
+Hbs=tf(b,a)
